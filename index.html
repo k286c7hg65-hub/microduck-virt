@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MicroDuck 虚拟环境 — 无硬件软件栈验证台</title>
+<style>
+  :root{
+    --ink:#14161a; --ink-2:#4a5058; --line:#dcdfe3; --bg:#fbfbfa; --panel:#fff;
+    --accent:#0f5f5c; --accent-soft:#e6f1f0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif;
+    line-height:1.65; font-size:16px;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:56px 22px 72px}
+  header{border-bottom:2px solid var(--ink); padding-bottom:22px}
+  h1{font-size:clamp(26px,4vw,38px); line-height:1.2; margin:0 0 10px; letter-spacing:-.01em}
+  .sub{color:var(--ink-2); font-size:15px; margin:0}
+  .kicker{
+    display:inline-block; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent); background:var(--accent-soft); padding:3px 9px; border-radius:2px; margin-bottom:16px;
+  }
+  h2{font-size:19px; margin:40px 0 14px; padding-bottom:7px; border-bottom:1px solid var(--line)}
+  p{margin:0 0 12px}
+  .metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin:22px 0 6px}
+  .metric{background:var(--panel); padding:16px 18px}
+  .metric b{display:block; font-size:24px; letter-spacing:-.01em; color:var(--accent); font-variant-numeric:tabular-nums}
+  .metric span{font-size:13px; color:var(--ink-2)}
+  video{width:100%; max-width:540px; border:1px solid var(--line); background:#000; display:block; margin:14px 0 6px}
+  .cap{font-size:13px; color:var(--ink-2)}
+  table{width:100%; border-collapse:collapse; font-size:14.5px; margin:10px 0 4px}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); font-weight:600}
+  td code, code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans Mono CJK SC",monospace; font-size:13px; background:#f1f2f4; padding:1px 5px; border-radius:3px}
+  a{color:var(--accent); text-underline-offset:3px}
+  ul{padding-left:20px; margin:8px 0 12px}
+  li{margin:4px 0}
+  ol{padding-left:22px}
+  .note{background:var(--panel); border-left:3px solid var(--accent); padding:13px 16px; margin:16px 0; font-size:14.5px; color:var(--ink-2)}
+  footer{margin-top:46px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="kicker">microduck-virt</span>
+  <h1>MicroDuck 虚拟环境</h1>
+  <p class="sub">零硬件、零 GPU 条件下验证整条软件栈的试验台。2026-09-02 建立。</p>
+</header>
+
+<div class="metrics">
+  <div class="metric"><b>61 → 14</b><span>观测维 → 动作维（闭环跑通）</span></div>
+  <div class="metric"><b>50 Hz</b><span>控制频率（每 10 物理步推理 1 次）</span></div>
+  <div class="metric"><b>CPU</b><span>MuJoCo 3.12 + onnxruntime 1.23</span></div>
+  <div class="metric"><b>0.125 / 0.272</b><span>vel 指令 0.3 / 0.6 对应实测均速 m/s</span></div>
+</div>
+
+<h2>行走成片</h2>
+<video controls preload="metadata" src="microduck_walk.mp4"></video>
+<p class="cap">EGL surfaceless 无头渲染（720×1280 → ffmpeg mp4）。速度指令单调响应，未出现摔倒。</p>
+
+<h2>分层行为栈</h2>
+<table>
+  <tr><th>层</th><th>脚本</th><th>职责</th></tr>
+  <tr><td>指挥</td><td><a href="scripts/duck_commander.py">duck_commander.py</a></td><td>自然语言指令 → 意图 → DSL → 执行，规则兜底</td></tr>
+  <tr><td>认知</td><td><a href="scripts/duck_planner.py">duck_planner.py</a></td><td>任务分解、多球连续处理、失败分叉、轨迹落盘</td></tr>
+  <tr><td>编排</td><td><a href="scripts/duck_orchestrator.py">duck_orchestrator.py</a></td><td>9 个策略会话、行为 DSL、相位切换</td></tr>
+  <tr><td>技能</td><td><a href="scripts/duck_skills.py">duck_skills.py</a></td><td>原子技能与组合技能</td></tr>
+  <tr><td>视觉</td><td><a href="scripts/duck_vision.py">duck_vision.py</a></td><td>渲染 → 定位 → 决策 → 追球闭环</td></tr>
+  <tr><td>验证</td><td><a href="scripts/verify_duck2.py">verify_duck2.py</a> / <a href="scripts/render_duck2.py">render_duck2.py</a></td><td>无渲染速度扫描 / 单策略行走渲染</td></tr>
+</table>
+
+<h2>已知的坑</h2>
+<ol>
+  <li><b>控制频率</b>：策略训练于 50 Hz，物理步 500 Hz，必须每 10 步推理一次，逐步推理会抖动到走不动。</li>
+  <li><b>延迟缓冲</b>：训练含 3–6 步延迟，推理脚本默认 0；直接加延迟会摔。</li>
+  <li><b>无头渲染</b>：需要 <code>MUJOCO_GL=egl</code> + <code>EGL_PLATFORM=surfaceless</code>，且渲染缓冲尺寸要不小于输出尺寸。</li>
+</ol>
+
+<div class="note">EGL 关闭时的 <code>EGLError</code> traceback 属于清理噪音，不影响成片。</div>
+
+<h2>文档</h2>
+<ul>
+  <li><a href="README.md">README.md</a>：环境搭建（从零 30 分钟）、已验证能力、脚本说明</li>
+  <li><a href="FROZEN_STACK.md">FROZEN_STACK.md</a>：行为栈冻结清单（每层的版本、依赖、验证命令）</li>
+  <li><a href="SIM2REAL_GAP.md">SIM2REAL_GAP.md</a>：真机到手后的逐项验证对照表</li>
+</ul>
+
+<footer>
+  本页为仓库入口页；源码与文档随仓发布，与 <code>microduck-virt</code> 工作目录同源。
+</footer>
+
+</div>
+</body>
+</html>
